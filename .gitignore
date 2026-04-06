@@ -1,0 +1,28 @@
+# Reference genome (3 GB — too large for git)
+reference/hg38.fa
+reference/hg38.fa.fai
+
+# Mod-Squad repo — re-clone on target machine
+Mod-Squad/
+
+# Trained model checkpoints
+models/
+test_results/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/*.out
+logs/*.err
