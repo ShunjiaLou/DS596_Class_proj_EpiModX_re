@@ -8,8 +8,8 @@ Complete guide for reproducing the paper results on the Boston University Shared
 
 ```bash
 cd /projectnb/YOURLAB    # replace with your lab/project directory
-git clone https://github.com/ShunjiaLou/DS596_Class_Proj_EpiModD.git
-cd DS596_Class_Proj_EpiModD
+git clone https://github.com/ShunjiaLou/DS596_Class_proj_EpiModX_re.git
+cd DS596_Class_proj_EpiModX_re
 ```
 
 ---
@@ -23,7 +23,7 @@ module load samtools
 samtools faidx hg38.fa
 ```
 
-Note the **full absolute path** to hg38.fa — you will need it in Steps 7 and 6.
+Note the **full absolute path** to hg38.fa — you will need it in Steps 5 and 6.
 
 ---
 
@@ -62,25 +62,7 @@ cd ../..
 
 ---
 
-## Step 6 — Generate datasets
-
-Before training, generate the three histone-mark CSV datasets from the raw BED/BIGWIG files.
-
-```bash
-export REFERENCE_GENOME_PATH=/path/to/hg38.fa   # <-- replace with actual path from Step 2
-python generate_dataset.py
-```
-
-This writes three files to `./Datasets/`:
-- `H3K27ac_all_data.csv`
-- `H3K4me3_all_data.csv`
-- `H3K27me3_all_data.csv`
-
-> Expected sizes: H3K27ac ~434 K rows, H3K4me3 ~135 K rows, H3K27me3 ~623 K rows.
-
----
-
-## Step 7 — Edit the SLURM scripts
+## Step 6 — Edit the SLURM scripts
 
 Two lines to update in **both** `sbatch_train.sh` and `sbatch_test.sh`:
 
@@ -96,7 +78,7 @@ nano sbatch_test.sh
 
 ---
 
-## Step 8 — Increase batch size for GPU
+## Step 7 — Increase batch size for GPU
 
 Edit `train_MTL_Moe.py` line ~36:
 
@@ -108,7 +90,7 @@ nano train_MTL_Moe.py
 
 ---
 
-## Step 9 — Submit training jobs (one per histone mark)
+## Step 8 — Submit training jobs (one per histone mark)
 
 Each histone mark is trained as a separate SLURM job. Submit all three at once:
 
@@ -131,7 +113,7 @@ tail -f logs/train_H3K27ac_*.out     # watch live output for one job
 
 ---
 
-## Step 10 — Run evaluation after training
+## Step 9 — Run evaluation after training
 
 Once all three training jobs complete, submit the test jobs:
 
@@ -148,7 +130,7 @@ Results are saved to:
 
 ---
 
-## Step 11 — Generate figures
+## Step 10 — Generate figures
 
 After all three test jobs complete:
 
@@ -166,17 +148,16 @@ Outputs:
 
 | # | Task | Done? |
 |---|------|-------|
-| 1 | Clone repo | ☐ |
+| 1 | Clone repo (datasets included) | ☐ |
 | 2 | Locate or download hg38.fa | ☐ |
 | 3 | Create conda env + pip install | ☐ |
 | 4 | Install mamba_ssm on GPU node | ☐ |
 | 5 | Install parallel_experts | ☐ |
-| 6 | Generate datasets | ☐ |
-| 7 | Edit REFERENCE_GENOME_PATH + CUDA version in SLURM scripts | ☐ |
-| 8 | Increase batch_size to 32 in train_MTL_Moe.py | ☐ |
-| 9 | Submit 3 training jobs | ☐ |
-| 10 | Submit 3 test jobs after training | ☐ |
-| 11 | Run plot_results.py | ☐ |
+| 6 | Edit REFERENCE_GENOME_PATH + CUDA version in SLURM scripts | ☐ |
+| 7 | Increase batch_size to 32 in train_MTL_Moe.py | ☐ |
+| 8 | Submit 3 training jobs | ☐ |
+| 9 | Submit 3 test jobs after training | ☐ |
+| 10 | Run plot_results.py | ☐ |
 
 ---
 
