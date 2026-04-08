@@ -33,7 +33,7 @@ def main(args):
     model_path = "./models/%s_%s.pt" %(histone,model_name)
     early_stop = 0
     max_early_stop = 5
-    batch_size = 8  # 8 for CPU; increase to 32-64 on GPU (edit here for SCC)
+    batch_size = 32  # 8 for CPU; increase to 32-64 on GPU (edit here for SCC)
     best_loss = 100
     seq_length = 4096
     # seq_length = 5120
