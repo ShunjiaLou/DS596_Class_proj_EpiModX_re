@@ -1,34 +1,29 @@
 #!/bin/bash
-#SBATCH -J EpiModX_test
-#SBATCH -p gpu
-#SBATCH --gres=gpu:1
-#SBATCH --mem=16G
-#SBATCH -t 2:00:00
-#SBATCH -o logs/test_%x_%j.out
-#SBATCH -e logs/test_%x_%j.err
-
-# Usage:
-#   sbatch --job-name=H3K27ac  sbatch_test.sh H3K27ac
-#   sbatch --job-name=H3K4me3  sbatch_test.sh H3K4me3
-#   sbatch --job-name=H3K27me3 sbatch_test.sh H3K27me3
-#
-# Or run all three after training:
-#   for h in H3K27ac H3K4me3 H3K27me3; do sbatch --job-name=$h sbatch_test.sh $h; done
+#$ -N EpiModX_test
+#$ -P ds596
+#$ -l gpus=1
+#$ -l h_rt=02:00:00
+#$ -cwd
+#$ -o logs/test_$JOB_NAME_$JOB_ID.out
+#$ -e logs/test_$JOB_NAME_$JOB_ID.err
 
 HISTONE=${1:-H3K4me3}
 
-# ── Load modules ───────────────────────────────────────────────────────────────
 module load miniconda
-module load cuda/11.8   # match the version used for training
+module load cuda/12.2
+module load gcc/12.2.0
 
-# ── Activate environment ───────────────────────────────────────────────────────
-conda activate EpiModX
+source /share/pkg.8/miniconda/25.3.1/install/etc/profile.d/conda.sh
+conda activate EpiModX_cuda122
 
-# ── Reference genome path ──────────────────────────────────────────────────────
-export REFERENCE_GENOME_PATH=/path/to/hg38.fa   # <-- EDIT THIS
+export CUDA_HOME=/share/pkg.8/cuda/12.2/install
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
-# ── Run test ───────────────────────────────────────────────────────────────────
+export REFERENCE_GENOME_PATH="/projectnb/ds596/projects/Team 5/reference/hg38.fa"
+
 echo "Testing histone: $HISTONE"
-python test_MTL_Moe.py --histone $HISTONE
+python test_MTL_Moe.py --histone "$HISTONE"
 
-echo "Testing finished. Results in test_results/${HISTONE}_LLM_Moe_test_result"
+echo "Testing finished: $HISTONE"
+echo "Results in test_results/${HISTONE}_LLM_Moe_test_result"

@@ -4,6 +4,8 @@ Complete guide for reproducing the paper results on the Boston University Shared
 
 ---
 
+# Part 1: Running EpiModX (Step-by-Step)
+
 ## Step 1 — Clone the repo
 
 ```bash
@@ -23,35 +25,60 @@ module load samtools
 samtools faidx hg38.fa
 ```
 
-Note the **full absolute path** to hg38.fa — you will need it in Steps 5 and 6.
+Note the **full absolute path** to hg38.fa — it is already set in the job scripts (`sbatch_train.sh` / `sbatch_test.sh`).
 
 ---
 
-## Step 3 — Create conda environment
+## Step 3 — Create conda environment (login node)
 
 ```bash
 module load miniconda
-conda create -n EpiModX python=3.10 -y
-conda activate EpiModX
-pip install -r requirements.txt
+conda create -n EpiModX_cuda122 python=3.10 -y
+source /share/pkg.8/miniconda/25.3.1/install/etc/profile.d/conda.sh
+conda activate EpiModX_cuda122
 ```
 
 ---
 
-## Step 4 — Install `mamba_ssm` (requires a GPU node)
+## Step 4 — Install all packages (GPU node)
 
-`mamba_ssm` must be compiled against CUDA and cannot be installed on a login node.
+PyTorch and `mamba_ssm` require CUDA and must be installed on an interactive GPU session.
+
+Request a GPU node:
 
 ```bash
-qrsh -l gpus=1 -l gpu_c=6.0    # request interactive GPU session
-conda activate EpiModX
-pip install mamba_ssm
-exit                             # return to login node when done
+qrsh -P ds596 -l gpus=1 -l gpu_c=7.0
 ```
 
----
+Once on the GPU node, load modules and activate the environment:
 
-## Step 5 — Install `parallel_experts`
+```bash
+module load miniconda
+module load cuda/12.2
+module load gcc/12.2.0
+
+source /share/pkg.8/miniconda/25.3.1/install/etc/profile.d/conda.sh
+conda activate EpiModX_cuda122
+
+export CUDA_HOME=/share/pkg.8/cuda/12.2/install
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+```
+
+Install all requirements (includes PyTorch with CUDA index):
+
+```bash
+pip install -r requirements.txt
+pip install "numpy<2"    # avoid NumPy 2.x binary incompatibility
+```
+
+Install `mamba_ssm`:
+
+```bash
+pip install --no-build-isolation mamba-ssm
+```
+
+Install `parallel_experts`:
 
 ```bash
 git clone https://github.com/UMass-Foundation-Model/Mod-Squad.git
@@ -60,25 +87,21 @@ pip install --no-build-isolation .
 cd ../..
 ```
 
----
-
-## Step 6 — Edit the SLURM scripts
-
-Two lines to update in **both** `sbatch_train.sh` and `sbatch_test.sh`:
+Verify:
 
 ```bash
-nano sbatch_train.sh
-nano sbatch_test.sh
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 ```
 
-| Line | Change |
-|------|--------|
-| `module load cuda/11.8` | Replace with the correct version (`module avail cuda`) |
-| `export REFERENCE_GENOME_PATH=/path/to/hg38.fa` | Replace with actual path from Step 2 |
+Exit the GPU session when done:
+
+```bash
+exit
+```
 
 ---
 
-## Step 7 — Increase batch size for GPU
+## Step 5 — Increase batch size for GPU
 
 Edit `train_MTL_Moe.py` line ~36:
 
@@ -90,22 +113,22 @@ nano train_MTL_Moe.py
 
 ---
 
-## Step 8 — Submit training jobs (one per histone mark)
+## Step 6 — Submit training jobs (one per histone mark)
 
-Each histone mark is trained as a separate SLURM job. Submit all three at once:
+Each histone mark is trained as a separate SGE job. Submit all three at once:
 
 ```bash
 mkdir -p logs
 for h in H3K27ac H3K4me3 H3K27me3; do
-    sbatch --job-name=$h sbatch_train.sh $h
+    qsub -N "$h" sbatch_train.sh "$h"
 done
 ```
 
 Monitor jobs:
 
 ```bash
-qstat -u $USER                       # check job status
-tail -f logs/train_H3K27ac_*.out     # watch live output for one job
+qstat -u $USER                           # check job status (qw=waiting, r=running)
+tail -f logs/train_H3K27ac_*.out         # watch live output for one job
 ```
 
 > First validation metrics appear at step 30,000 (~3–4 hours per job on a single GPU).  
@@ -113,13 +136,13 @@ tail -f logs/train_H3K27ac_*.out     # watch live output for one job
 
 ---
 
-## Step 9 — Run evaluation after training
+## Step 7 — Run evaluation after training
 
 Once all three training jobs complete, submit the test jobs:
 
 ```bash
 for h in H3K27ac H3K4me3 H3K27me3; do
-    sbatch --job-name=$h sbatch_test.sh $h
+    qsub -N "$h" sbatch_test.sh "$h"
 done
 ```
 
@@ -130,7 +153,7 @@ Results are saved to:
 
 ---
 
-## Step 10 — Generate figures
+## Step 8 — Generate figures
 
 After all three test jobs complete:
 
@@ -149,20 +172,58 @@ Outputs:
 | # | Task | Done? |
 |---|------|-------|
 | 1 | Clone repo (datasets included) | ☐ |
-| 2 | Locate or download hg38.fa | ☐ |
-| 3 | Create conda env + pip install | ☐ |
-| 4 | Install mamba_ssm on GPU node | ☐ |
-| 5 | Install parallel_experts | ☐ |
-| 6 | Edit REFERENCE_GENOME_PATH + CUDA version in SLURM scripts | ☐ |
-| 7 | Increase batch_size to 32 in train_MTL_Moe.py | ☐ |
-| 8 | Submit 3 training jobs | ☐ |
-| 9 | Submit 3 test jobs after training | ☐ |
-| 10 | Run plot_results.py | ☐ |
+| 2 | Download hg38.fa | ☐ |
+| 3 | Create conda env (login node) | ☐ |
+| 4 | Install all packages on GPU node (PyTorch, mamba_ssm, parallel_experts) | ☐ |
+| 5 | Increase batch_size to 32 in train_MTL_Moe.py | ☐ |
+| 6 | Submit 3 training jobs | ☐ |
+| 7 | Submit 3 test jobs after training | ☐ |
+| 8 | Run plot_results.py | ☐ |
 
 ---
 
-## Things you need to figure out on SCC
+# Part 2: GPU Environment — Troubleshooting & Reference
 
-| Item | How to find it |
-|------|----------------|
-| CUDA module name | `module avail cuda` |
+## Accessing a GPU Node
+
+```bash
+qrsh -P ds596 -l gpus=1              # standard request
+qrsh -P ds596 -l gpus=1 -l gpu_c=7.0  # request newer GPU (V100+)
+```
+
+## One-Line Activation (after first-time setup)
+
+```bash
+module load cuda/12.2 gcc/12.2.0 miniconda && source activate && conda activate EpiModX_cuda122
+```
+
+## Quick Debug
+
+```bash
+python - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("cuda available:", torch.cuda.is_available())
+PY
+```
+
+## Common Errors & Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `pip not found` | env not activated | `source activate && conda activate EpiModX_cuda122` |
+| `nvcc not found` | forgot module load | `module load cuda/12.2` |
+| CUDA mismatch | torch CUDA != system CUDA | reinstall torch with `--extra-index-url https://download.pytorch.org/whl/cu121` |
+| GCC too old | old compiler | `module load gcc/12.2.0` |
+| NumPy crash | NumPy 2.x | `pip install "numpy<2"` |
+| `sbatch not found` | wrong scheduler | use `qsub` (BU SCC uses SGE, not SLURM) |
+
+## Key Mental Model
+
+You must align 3 layers:
+
+1. **GPU node** — `qrsh`
+2. **System modules** — CUDA 12.2 + GCC 12.2
+3. **Python env** — torch 2.2.2 + packages
+
+If any layer is mismatched → things break.
