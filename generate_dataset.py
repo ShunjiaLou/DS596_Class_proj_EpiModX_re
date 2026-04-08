@@ -16,7 +16,7 @@ Pipeline per histone mark:
      excluding ENCODE blacklist regions
   8. Write CSV: chrom, start, end, [patient_col × 22]
 
-Output: Datasets/{histone}_all_data.csv
+Output: Datasets/{histone}_generated.csv
 
 Usage:
   python generate_dataset.py --histone H3K27ac
@@ -421,7 +421,7 @@ def build_dataset(histone: str, metadata_csv: str, bigwig_dir: str,
     df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     os.makedirs(output_dir, exist_ok=True)
-    out_path = os.path.join(output_dir, f"{histone}_all_data.csv")
+    out_path = os.path.join(output_dir, f"{histone}_generated.csv")
     df.to_csv(out_path, index=False)
     print(f"\nSaved: {out_path}")
     print(f"  Total rows : {len(df):,}  ({len(positive_rows):,} pos / {len(negative_rows):,} neg)")
@@ -453,7 +453,7 @@ def parse_args():
     )
     parser.add_argument(
         "--output_dir", type=str, default="./Datasets",
-        help="Directory to write {histone}_all_data.csv"
+        help="Directory to write {histone}_generated.csv"
     )
     parser.add_argument(
         "--blacklist", type=str, default=None,

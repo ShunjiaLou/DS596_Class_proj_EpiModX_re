@@ -5,6 +5,9 @@ reference/hg38.fa.fai
 # Mod-Squad repo — re-clone on target machine
 Mod-Squad/
 
+# Generated datasets (re-generate with generate_dataset.py)
+Datasets/*_generated.csv
+
 # Trained model checkpoints
 models/
 test_results/
